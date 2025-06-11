@@ -4,54 +4,79 @@ import { Request, Response } from "express";
 const Add_Cart_item = async (req: Request, res: Response): Promise<void> => {
     try {
         const newItem = req.body as ICartItem;
+        
+        if (!newItem.name || !newItem.image || !newItem.original_price || !newItem.discount_price || !newItem.quantity || !newItem.category) {
+            res.status(400).json({ success: false, message: "Missing required fields" });
+            return;
+        }
+
         let cart = await Cart.findOne();
         if (!cart) {
             cart = new Cart({ items: [newItem] });
         } else {
-            const exists = cart.items.some(item => item.name === newItem.name);
+            const exists = cart.items.some(item => item.name.toLowerCase() === newItem.name.toLowerCase());
             if (exists) {
-                res.status(400).send("Item Already Exists");
+                res.status(400).json({ success: false, message: "Item already exists in cart" });
                 return;
             }
             cart.items.push(newItem);
         }
         await cart.save();
-        res.status(200).send({
-            message: "Item added to Cart Successfully",
+        res.status(200).json({
+            success: true,
+            message: "Item added to cart successfully",
             items: cart.items
         });
-    } catch (err) {
-        res.status(400).send("Error Occurred While Adding Item to Cart");
+    } catch (err: any) {
+        console.error("Error adding item to cart:", err);
+        res.status(500).json({ success: false, message: "Error occurred while adding item to cart" });
     }
 };
 
 const Get_Cart_Items = async (req: Request, res: Response): Promise<void> => {
     try {
         const cart = await Cart.findOne();
-        res.status(200).send({
-            message: "Details Fetched Successfully",
+        res.status(200).json({
+            success: true,
+            message: "Cart details fetched successfully",
             Cart_Items: cart?.items || []
         });
-    } catch (err) {
-        res.status(400).send("Error Occurred While Fetching the Details");
+    } catch (err: any) {
+        console.error("Error fetching cart items:", err);
+        res.status(500).json({ success: false, message: "Error occurred while fetching cart details" });
     }
 };
 
 const Delete_Cart_Item = async (req: Request, res: Response): Promise<void> => {
     try {
         const { name } = req.params;
-        const cart = await Cart.findOne();
-        if (!cart) {
-            res.status(404).send("Cart Not Found");
+        if (!name) {
+            res.status(400).json({ success: false, message: "Item name is required" });
             return;
         }
-        cart.items = cart.items.filter(item => item.name !== name);
+
+        const cart = await Cart.findOne();
+        if (!cart) {
+            res.status(404).json({ success: false, message: "Cart not found" });
+            return;
+        }
+        
+        const initialLength = cart.items.length;
+        cart.items = cart.items.filter(item => item.name.toLowerCase() !== name.toLowerCase());
+        
+        if (cart.items.length === initialLength) {
+            res.status(404).json({ success: false, message: "Item not found in cart" });
+            return;
+        }
+
         await cart.save();
-        res.status(200).send({
-            message: "Cart Item Deleted Successfully"
+        res.status(200).json({
+            success: true,
+            message: "Cart item deleted successfully"
         });
-    } catch (err) {
-        res.status(400).send("Error Occurred While Deleting the Cart Item");
+    } catch (err: any) {
+        console.error("Error deleting cart item:", err);
+        res.status(500).json({ success: false, message: "Error occurred while deleting the cart item" });
     }
 };
 
@@ -65,7 +90,8 @@ const Update_Cart_Item_Quantity = async (req: Request, res: Response): Promise<v
             });
             return;
         }
-        const cart = await Cart.findOne()
+        
+        const cart = await Cart.findOne();
         if (!cart) {
             res.status(404).json({
                 success: false,
@@ -73,6 +99,7 @@ const Update_Cart_Item_Quantity = async (req: Request, res: Response): Promise<v
             });
             return;
         }
+        
         const itemIndex = cart.items.findIndex(item => item._id?.toString() === _id);
         if (itemIndex === -1) {
             res.status(404).json({
@@ -81,6 +108,7 @@ const Update_Cart_Item_Quantity = async (req: Request, res: Response): Promise<v
             });
             return;
         }
+        
         cart.items[itemIndex].quantity = quantity;
         await cart.save();
         res.status(200).json({
@@ -88,7 +116,7 @@ const Update_Cart_Item_Quantity = async (req: Request, res: Response): Promise<v
             message: "Cart item quantity updated successfully",
             item: cart.items[itemIndex]
         });
-    } catch (err) {
+    } catch (err: any) {
         console.error("Error updating cart item quantity:", err);
         res.status(500).json({
             success: false,
@@ -114,7 +142,7 @@ const Clear_Cart = async (req: Request, res: Response): Promise<void> => {
             success: true,
             message: "Cart cleared successfully"
         });
-    } catch (err) {
+    } catch (err: any) {
         console.error("Error clearing cart:", err);
         res.status(500).json({
             success: false,

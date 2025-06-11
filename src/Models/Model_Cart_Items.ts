@@ -1,18 +1,5 @@
 import mongoose, { Document, Schema } from "mongoose";
-
-export interface ICartItem {
-  _id?: string;
-  name: string;
-  image: string;
-  original_price: number;
-  discount_price: number;
-  quantity: number;
-  category: string;
-}
-
-export interface ICart extends Document {
-  items: ICartItem[];
-}
+import { ICartItem, ICart } from "../Types";
 
 const CartItemSchema: Schema = new Schema<ICartItem>({
   name: { type: String, required: true },
@@ -20,7 +7,8 @@ const CartItemSchema: Schema = new Schema<ICartItem>({
   original_price: { type: Number, required: true },
   discount_price: { type: Number, required: true },
   quantity: { type: Number, required: true },
-  category: { type: String, required: true }
+  category: { type: String, required: true },
+  description: { type: String }
 }, { _id: true });
 
 const CartSchema: Schema = new Schema<ICart>({
@@ -28,4 +16,5 @@ const CartSchema: Schema = new Schema<ICart>({
 }, { timestamps: true });
 
 const Cart = mongoose.model<ICart>("Cart", CartSchema);
+export { ICartItem };
 export default Cart;
